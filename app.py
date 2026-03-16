@@ -1,12 +1,11 @@
-import os
-import yt_dlp
-import requests
+import os, yt_dlp, requests
 from flask import Flask, render_template, request, send_file, jsonify, after_this_request
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 DOWNLOAD_FOLDER = '/tmp'
+COOKIE_PATH = 'cookies.txt' # GitHubに上げたクッキーファイルを使う設定
 
 @app.route('/')
 def index():
@@ -17,65 +16,65 @@ def analyze():
     try:
         urls = request.json.get('urls', [])
         all_songs = []
-        # YouTubeのブロックを回避するための設定を強化
         ydl_opts = {
-            'quiet': True, 
-            'extract_flat': True,
-            'nocheckcertificate': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'quiet': True, 'extract_flat': True, 'nocheckcertificate': True,
         }
+        # クッキーファイルがあれば使う（ブロック回避用）
+        if os.path.exists(COOKIE_PATH):
+            ydl_opts['cookiefile'] = COOKIE_PATH
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             for url in urls:
-                result = ydl.extract_info(url, download=False)
-                if not result: continue
-                entries = result.get('entries', [result])
+                res = ydl.extract_info(url, download=False)
+                entries = res.get('entries', [res])
                 for entry in entries:
-                    if not entry: continue
                     all_songs.append({
                         "id": entry.get('id'),
                         "url": f"https://www.youtube.com/watch?v={entry.get('id')}",
                         "title": entry.get('title', '無題'),
                         "thumbnail": f"https://i.ytimg.com/vi/{entry.get('id')}/hqdefault.jpg",
-                        "uploader": entry.get('uploader', 'Unknown')
+                        "uploader": entry.get('uploader', '不明')
                     })
         return jsonify({"success": True, "songs": all_songs})
     except Exception as e:
-        # エラーが起きてもJSONを返す
-        return jsonify({"success": False, "error": str(e)}), 200
+        return jsonify({"success": False, "error": str(e)})
 
 @app.route('/download', methods=['POST'])
 def download():
     try:
-        data = request.json
-        url, filename, fmt = data.get('url'), data.get('filename'), data.get('format')
-        auto_clean = data.get('auto_clean', False)
-        off_s, off_e = int(data.get('offset_start', 0)), int(data.get('offset_end', 0))
+        d = request.json
+        url, name, fmt = d.get('url'), d.get('filename'), d.get('format')
+        off_s, off_e = int(d.get('offset_start', 0)), int(d.get('offset_end', 0))
 
         ydl_opts = {
-            'outtmpl': f'{DOWNLOAD_FOLDER}/{filename}.%(ext)s',
+            'outtmpl': f'{DOWNLOAD_FOLDER}/{name}.%(ext)s',
             'format': 'bestaudio/best',
             'nocheckcertificate': True,
         }
+        if os.path.exists(COOKIE_PATH):
+            ydl_opts['cookiefile'] = COOKIE_PATH
 
-        if auto_clean:
-            ydl_opts['postprocessors'] = [{'key': 'SponsorBlock', 'categories': ['intro', 'outro', 'music_offtopic', 'filler']}]
-
-        ffmpeg_args = ['-ss', str(off_s)]
         if fmt == 'wav':
-            ydl_opts.setdefault('postprocessors', []).append({'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'})
+            ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'}]
             ydl_opts['postprocessor_args'] = ['-ar', '48000', '-sample_fmt', 's24']
 
-        # 実行
+        if off_s > 0 or off_e > 0:
+            with yt_dlp.YoutubeDL({'quiet': True, 'cookiefile': COOKIE_PATH if os.path.exists(COOKIE_PATH) else None}) as ydl_info:
+                info = ydl_info.extract_info(url, download=False)
+                duration = info.get('duration', 0)
+                ffmpeg_args = ['-ss', str(off_s)]
+                if off_e > 0: ffmpeg_args.extend(['-to', str(duration - off_e)])
+                ydl_opts['external_downloader'] = 'ffmpeg'
+                ydl_opts['external_downloader_args'] = {'ffmpeg_i': ffmpeg_args}
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
-            path = f"{DOWNLOAD_FOLDER}/{filename}.{fmt}"
-
-        if not os.path.exists(path): return "File missing", 404
+            path = f"{DOWNLOAD_FOLDER}/{name}.{fmt}"
 
         @after_this_request
-        def cleanup(response):
+        def cleanup(r):
             if os.path.exists(path): os.remove(path)
-            return response
+            return r
         return send_file(path, as_attachment=True)
     except Exception as e:
         return str(e), 500
