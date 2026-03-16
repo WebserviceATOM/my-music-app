@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Music App</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
+        .card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
+        textarea, input, select { background: #333; color: white; border: 1px solid #444; padding: 10px; border-radius: 5px; width: 100%; box-sizing: border-box; margin-top: 5px; }
+        button { background: #e50914; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        img { border-radius: 5px; margin-bottom: 10px; }
+        #status { color: #00ff00; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>音楽保存システム</h1>
+    <div class="card">
+        <label>YouTube URLを入力 (1行に1つ)</label>
+        <textarea id="urlInput" rows="5" placeholder="https://www.youtube.com/watch?v=..."></textarea>
+        <button onclick="analyzeAll()">1. 情報を解析する</button>
+    </div>
+    <div id="status"></div>
+    <div id="list"></div>
+    <button id="downloadBtn" style="display:none; background: #007bff;" onclick="startBatchDownload()">2. 全曲ダウンロード開始</button>
+
+    <script>
+        let songQueue = [];
+        async function analyzeAll() {
+            const urls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim());
+            const listDiv = document.getElementById('list');
+            listDiv.innerHTML = "解析中...しばらくお待ちください。";
+            songQueue = [];
+
+            for (let url of urls) {
+                try {
+                    const res = await fetch('/analyze', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({url: url.trim()})
+                    });
+                    const data = await res.json();
+                    const id = Math.random().toString(36).substring(7);
+                    songQueue.push({id, url: url.trim(), data});
+
+                    const html = `
+                        <div class="card" id="card-${id}">
+                            <img src="${data.thumbnail}" width="100%">
+                            <label>曲名: <input type="text" id="title-${id}" value="${data.title}"></label>
+                            <label>アルバム: <input type="text" id="album-${id}" value="${data.album}"></label>
+                            <label>開始(秒/分): <input type="text" id="start-${id}" placeholder="例: 00:00:10"></label>
+                            <label>終了(秒/分): <input type="text" id="end-${id}" placeholder="例: 00:04:30"></label>
+                            <label>形式: <select id="format-${id}"><option value="wav">WAV (音楽)</option><option value="mp4">MP4 (動画)</option></select></label>
+                        </div>`;
+                    listDiv.innerHTML = (listDiv.innerHTML.includes("解析中")) ? html : listDiv.innerHTML + html;
+                } catch(e) { console.error(e); }
+            }
+            document.getElementById('downloadBtn').style.display = 'block';
+            document.getElementById('status').innerText = "解析完了。設定を確認してダウンロードしてください。";
+        }
+
+        async function startBatchDownload() {
+            for (let song of songQueue) {
+                const id = song.id;
+                const title = document.getElementById(`title-${id}`).value;
+                document.getElementById('status').innerText = `ダウンロード中: ${title}`;
+                
+                const res = await fetch('/download', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        url: song.url,
+                        filename: title,
+                        format: document.getElementById(`format-${id}`).value,
+                        start: document.getElementById(`start-${id}`).value,
+                        end: document.getElementById(`end-${id}`).value
+                    })
+                });
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${title}.${document.getElementById(`format-${id}`).value}`;
+                a.click();
+                document.getElementById(`card-${id}`).style.opacity = "0.5";
+            }
+            document.getElementById('status').innerText = "すべての処理が完了しました！";
+        }
+    </script>
+</body>
+</html>
