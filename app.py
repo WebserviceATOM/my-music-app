@@ -8,10 +8,13 @@ DOWNLOAD_FOLDER = '/tmp'
 COOKIE_FILE = 'cookies.txt'
 
 def safe_filename(name):
-    return re.sub(r'[\\/:*?"<>|]', '_', name)[:50]
+    # Android/Windowsで禁止されている記号を確実に除去
+    name = re.sub(r'[\\/:*?"<>|]', '_', name)
+    return name[:50].strip()
 
 @app.route('/')
-def index(): return render_template('index.html')
+def index():
+    return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -21,7 +24,6 @@ def analyze():
         ydl_opts = {
             'quiet': True, 'extract_flat': True, 'nocheckcertificate': True,
             'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
-            # ブロック回避用：Android公式アプリを完全に装う
             'client_identifier': 'android',
             'user_agent': 'com.google.android.youtube/19.08.35 (Linux; U; Android 14; ja_JP; CPH2523)',
         }
@@ -38,7 +40,8 @@ def analyze():
                         "uploader": entry.get('uploader', 'UNKNOWN')
                     })
         return jsonify({"success": True, "songs": all_songs})
-    except Exception as e: return jsonify({"success": False, "error": str(e)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 @app.route('/download', methods=['POST'])
 def download():
@@ -47,16 +50,12 @@ def download():
         url, raw_name, fmt = d.get('url'), d.get('filename'), d.get('format')
         name = safe_filename(raw_name)
         
-        # 403回避のための究極設定
         ydl_opts = {
             'outtmpl': f'{DOWNLOAD_FOLDER}/{name}.%(ext)s',
             'nocheckcertificate': True,
             'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
-            'client_identifier': 'android', # ここが最重要
+            'client_identifier': 'android',
             'format': 'bestaudio/best',
-            # サーバーIPによる制限を回避するためのリトライ設定
-            'socket_timeout': 30,
-            'retries': 5,
         }
 
         if fmt == 'wav':
@@ -68,15 +67,15 @@ def download():
             ydl_opts.update({'format': 'bestvideo+bestaudio/best', 'merge_output_format': 'mp4'})
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # 403が出る場合、まず動画情報を再読み込みしてトークンをリフレッシュ
-            ydl.extract_info(url, download=True)
+            ydl.download([url])
             
         path = f"{DOWNLOAD_FOLDER}/{name}.{fmt}"
-        if not os.path.exists(path): raise Exception("FILE_GEN_FAILED")
-
         return send_file(path, as_attachment=True)
     except Exception as e:
         return str(e), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=7860)
+    # Railway環境では環境変数 PORT が割り当てられるので、それを優先して使います
+    port = int(os.environ.get("PORT", 8080))
+    # 0.0.0.0 で待ち受けるのが必須です
+    app.run(host='0.0.0.0', port=port)
