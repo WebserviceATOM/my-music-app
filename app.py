@@ -5,12 +5,46 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 DOWNLOAD_FOLDER = '/tmp'
-COOKIE_FILE = 'cookies.txt'
+RAW_COOKIE_FILE = 'cookies.txt'
+FIXED_COOKIE_FILE = '/tmp/fixed_cookies.txt'
 
-def safe_filename(name):
-    # Android/Windowsで禁止されている記号を確実に除去
-    name = re.sub(r'[\\/:*?"<>|]', '_', name)
-    return name[:50].strip()
+# --- どんなに壊れたクッキーファイルでもプロ仕様に直す「強制修理装置」 ---
+def fix_cookie_format():
+    if not os.path.exists(RAW_COOKIE_FILE):
+        return None
+    try:
+        with open(RAW_COOKIE_FILE, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 1. 文字としての「\t」を本物の「タブ記号」に変換
+        content = content.replace('\\t', '\t')
+        
+        fixed_lines = []
+        fixed_lines.append("# Netscape HTTP Cookie File")
+        
+        for line in content.splitlines():
+            if line.startswith('#') or not line.strip():
+                continue
+            
+            # タブ、または複数のスペースで分割して無理やり7項目にする
+            parts = re.split(r'\t| +', line.strip())
+            if len(parts) >= 7:
+                # ドメインの先頭にドットがない場合は追加
+                domain = parts[0]
+                if not domain.startswith('.'):
+                    domain = '.' + domain
+                parts[0] = domain
+                # 項目を本物のタブで結合し直す
+                fixed_lines.append('\t'.join(parts[:7]))
+        
+        with open(FIXED_COOKIE_FILE, 'w', encoding='utf-8', newline='\n') as f:
+            f.write('\n'.join(fixed_lines) + '\n')
+            
+        print("--- Cookie File Fixed Successfully ---")
+        return FIXED_COOKIE_FILE
+    except Exception as e:
+        print(f"Cookie Fix Error: {e}")
+        return None
 
 @app.route('/')
 def index():
@@ -21,12 +55,17 @@ def analyze():
     try:
         urls = request.json.get('urls', [])
         all_songs = []
+        
+        # 使う直前にクッキーを修理する
+        cookie_path = fix_cookie_format()
+        
         ydl_opts = {
             'quiet': True, 'extract_flat': True, 'nocheckcertificate': True,
-            'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
+            'cookiefile': cookie_path if cookie_path else None,
             'client_identifier': 'android',
             'user_agent': 'com.google.android.youtube/19.08.35 (Linux; U; Android 14; ja_JP; CPH2523)',
         }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             for url in urls:
                 res = ydl.extract_info(url, download=False)
@@ -48,18 +87,20 @@ def download():
     try:
         d = request.json
         url, raw_name, fmt = d.get('url'), d.get('filename'), d.get('format')
-        name = safe_filename(raw_name)
+        # Android/Windowsで安全なファイル名に
+        name = re.sub(r'[\\/:*?"<>|]', '_', raw_name)[:50]
         
+        cookie_path = fix_cookie_format()
         ydl_opts = {
             'outtmpl': f'{DOWNLOAD_FOLDER}/{name}.%(ext)s',
             'nocheckcertificate': True,
-            'cookiefile': COOKIE_FILE if os.path.exists(COOKIE_FILE) else None,
+            'cookiefile': cookie_path if cookie_path else None,
             'client_identifier': 'android',
-            'format': 'bestaudio/best',
         }
 
         if fmt == 'wav':
             ydl_opts.update({
+                'format': 'bestaudio/best',
                 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'}],
                 'postprocessor_args': ['-ar', '44100', '-sample_fmt', 's16']
             })
@@ -75,7 +116,5 @@ def download():
         return str(e), 500
 
 if __name__ == '__main__':
-    # Railway環境では環境変数 PORT が割り当てられるので、それを優先して使います
     port = int(os.environ.get("PORT", 8080))
-    # 0.0.0.0 で待ち受けるのが必須です
     app.run(host='0.0.0.0', port=port)
