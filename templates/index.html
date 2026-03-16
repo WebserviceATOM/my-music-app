@@ -4,139 +4,139 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VIBESYNC CONSOLE</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #000; --panel: #0a0a0a; --line: #222; --accent: #00f2ea; --text: #eee; }
-        * { box-sizing: border-box; border-radius: 0; margin: 0; padding: 0; font-family: 'Inter', 'Noto Sans JP', sans-serif; }
-        input, select, button { border-radius: 8px !important; }
-        body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+        :root { --bg: #000; --panel: #0a0a0a; --line: #1a1a1a; --accent: #00f2ea; --text: #555; --active: #fff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 8px; font-family: 'Share Tech Mono', 'Noto Sans JP', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
-        /* サイドバー：隠しシステム情報 */
+        /* 左端スリット：隠しサイドバー */
         #side {
             position: fixed; left: -260px; top: 0; width: 260px; height: 100vh;
-            background: #050505; border-right: 1px solid var(--line);
-            transition: 0.3s ease; z-index: 2000; padding: 60px 25px;
+            background: #000; border-right: 1px solid var(--line);
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; padding: 60px 25px;
         }
         #side.open { left: 0; }
         .trigger {
-            position: fixed; left: 10px; top: 15px; width: 45px; height: 45px;
-            z-index: 2001; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            position: fixed; left: 0; top: 0; width: 30px; height: 100vh;
+            z-index: 2001; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
-        .trigger div { width: 20px; height: 1px; background: #444; position: relative; }
-        .trigger div::before, .trigger div::after { content:''; position:absolute; width:20px; height:1px; background:#444; left:0; }
-        .trigger div::before { top:-7px; } .trigger div::after { top:7px; }
+        .trigger:hover { background: rgba(255,255,255,0.02); }
+        .trigger span { transform: rotate(-90deg); font-size: 8px; letter-spacing: 4px; font-weight: bold; }
 
-        .sys-label { font-size: 0.6rem; color: #444; display: block; margin-top: 25px; border-bottom: 1px solid #111; }
-        .sys-val { color: var(--accent); font-weight: bold; font-size: 0.8rem; margin-top: 5px; display: block; }
+        .sys-label { font-size: 9px; color: #222; text-transform: uppercase; margin-top: 25px; border-bottom: 1px solid #111; }
+        .sys-val { color: var(--accent); font-weight: bold; font-size: 11px; margin-top: 4px; display: block; }
 
-        /* メインパネル */
-        #main { flex: 1; padding: 60px 20px 140px 20px; width: 100%; max-width: 600px; margin: 0 auto; }
-        header { margin-bottom: 40px; text-align: center; border-bottom: 1px solid var(--line); padding-bottom: 15px; }
-        header h1 { font-size: 1.1rem; font-weight: 900; letter-spacing: 12px; color: #fff; opacity: 0.5; }
+        /* メインコンソール */
+        #main { padding: 80px 20px 140px 20px; width: 100%; max-width: 600px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 60px; }
+        header h1 { font-size: 12px; font-weight: 900; letter-spacing: 15px; color: var(--active); opacity: 0.2; }
 
-        .panel { background: var(--panel); border: 1px solid var(--line); padding: 25px; margin-bottom: 25px; }
-        .row { display: flex; gap: 10px; margin-bottom: 12px; }
-        input, select { background: #000; border: 1px solid var(--line); color: #fff; padding: 14px; font-size: 0.95rem; outline: none; width: 100%; }
-        input:focus { border-color: #444; }
+        .card { background: var(--panel); border: 1px solid var(--line); padding: 30px; margin-bottom: 30px; }
+        .row { display: flex; gap: 10px; margin-bottom: 15px; }
+        input, select { background: #000; border: 1px solid var(--line); color: var(--active); padding: 15px; font-size: 13px; outline: none; width: 100%; border-radius: 4px !important; }
+        input:focus { border-color: #333; }
         
         .btn { border: none; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-        .btn-add { background: #111; color: #fff; width: 50px; font-size: 1.5rem; }
-        .btn-run { background: #eee; color: #000; width: 100%; height: 55px; font-size: 1rem; font-weight: 900; margin-top: 10px; }
+        .btn-add { background: #111; color: #333; width: 50px; font-size: 20px; }
+        .btn-add:hover { color: var(--active); }
+        .btn-run { background: var(--active); color: #000; width: 100%; height: 60px; font-size: 13px; font-weight: 900; letter-spacing: 5px; margin-top: 20px; }
 
-        /* トラック表示 */
-        .track { background: var(--panel); border: 1px solid var(--line); margin-bottom: 15px; overflow: hidden; }
-        .track-top { display: flex; align-items: center; border-bottom: 1px solid #111; padding-right: 15px; }
-        .thumb { width: 110px; height: 62px; object-fit: cover; border-right: 1px solid var(--line); cursor: pointer; opacity: 0.6; }
-        .track-title { flex: 1; background: transparent; border: none; font-size: 0.95rem; font-weight: bold; color: #fff; padding: 15px; outline: none; }
+        /* リスト項目 */
+        .track { background: var(--panel); border: 1px solid var(--line); margin-bottom: 10px; overflow: hidden; border-radius: 4px !important; }
+        .track-top { display: flex; align-items: center; border-bottom: 1px solid #111; }
+        .thumb { width: 100px; height: 56px; object-fit: cover; opacity: 0.3; filter: grayscale(1); border-right: 1px solid var(--line); }
+        .track:hover .thumb { opacity: 0.8; filter: grayscale(0); }
+        .title-in { flex: 1; background: transparent; border: none !important; font-size: 12px; font-weight: bold; color: var(--active); padding: 15px; outline: none; }
         
-        .track-details { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .label { font-size: 0.6rem; color: #555; display: block; margin-bottom: 5px; font-weight: bold; }
+        .track-details { padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .label { font-size: 9px; color: #222; font-weight: bold; margin-bottom: 3px; display: block; }
 
-        /* 巨大保存ボタン */
+        /* 下部実行バー */
         #exec-bar {
-            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 560px; height: 70px;
-            background: #eee; color: #000; display: none; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 1.1rem; cursor: pointer; z-index: 1000; letter-spacing: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
+            background: var(--active); color: #000; display: none; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 14px; cursor: pointer; z-index: 1000; letter-spacing: 15px;
         }
+        #exec-bar:hover { background: var(--accent); }
 
-        #msg { text-align: center; color: var(--accent); font-size: 0.75rem; margin-bottom: 20px; font-weight: bold; min-height: 1.2rem; }
+        #msg { text-align: center; color: var(--accent); font-size: 10px; margin-bottom: 30px; font-weight: bold; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
-<div class="trigger" onclick="toggleSide()"><div></div></div>
+<div class="trigger" onclick="toggleSide()"><span>SYSTEM_MONITOR</span></div>
 <div id="side">
-    <span class="sys-label">SERVER_STATE</span><span class="sys-val">RAILWAY_ONLINE</span>
-    <span class="sys-label">AUDIO_SPEC</span><span class="sys-val">24bit WAV / 48kHz</span>
-    <span class="sys-label">DEVICE_SPOOF</span><span class="sys-val">ANDROID_MOBILE</span>
-    <span class="sys-label">TRACK_COUNT</span><span class="sys-val" id="cnt">00</span>
-    <button class="btn" style="width:100%; padding:10px; margin-top:60px; background:#111; color:#444; font-size:0.7rem;" onclick="toggleSide()">閉じる</button>
+    <span class="sys-label">Node_Status</span><span class="sys-val">ONLINE</span>
+    <span class="sys-label">Audio_Engine</span><span class="sys-val">CD_QUALITY_WAV</span>
+    <span class="sys-label">Device_Spoof</span><span class="sys-val">ANDROID_OPPO</span>
+    <span class="sys-label">Queue_Count</span><span class="sys-val" id="cnt">00</span>
+    <button class="btn" style="width:100%; padding:10px; margin-top:100px; background:#000; border:1px solid #111; color:#222; font-size:9px;" onclick="toggleSide()">CLOSE_CONSOLE</button>
 </div>
 
 <div id="main">
-    <header><h1>VIBESYNC</h1></header>
+    <header><h1>VIBESYNC:CONSOLE</h1></header>
 
-    <div class="panel">
-        <div id="inputs">
+    <div class="card">
+        <div id="url-list">
             <div class="row">
-                <input type="text" class="url-in" placeholder="YouTube URL 入力">
+                <input type="text" class="url-in" placeholder="SOURCE_URL">
                 <button class="btn btn-add" onclick="addIn()">+</button>
             </div>
         </div>
         <div style="margin-top:30px;">
-            <span class="label">ファイル命名規則</span>
+            <span class="label">NAMING_RULE</span>
             <input type="text" id="tpl" value="[{title}] {artist}">
         </div>
-        <button class="btn btn-run" onclick="doAnalyze()">解析を実行</button>
+        <button class="btn btn-run" onclick="doAnalyze()">START_SIGNAL_SCAN</button>
     </div>
 
-    <div id="msg"></div>
+    <div id="msg">_SYSTEM_IDLE</div>
     <div id="list"></div>
 </div>
 
-<div id="exec-bar" onclick="doDownload()">一括保存</div>
+<div id="exec-bar" onclick="doDownload()">EXECUTE_SYNC</div>
 
 <script>
     function toggleSide() { document.getElementById('side').classList.toggle('open'); }
     function addIn() {
         const d = document.createElement('div'); d.className = 'row';
-        d.innerHTML = `<input type="text" class="url-in" placeholder="URLを追加"><button class="btn btn-add" style="background:#000;" onclick="this.parentElement.remove()">-</button>`;
-        document.getElementById('inputs').appendChild(d);
+        d.innerHTML = `<input type="text" class="url-in" placeholder="SOURCE_URL"><button class="btn btn-add" style="background:#000;color:#222;" onclick="this.parentElement.remove()">-</button>`;
+        document.getElementById('url-list').appendChild(d);
     }
 
     async function doAnalyze() {
         const urls = Array.from(document.querySelectorAll('.url-in')).map(i => i.value).filter(v => v.trim());
         const msg = document.getElementById('msg');
-        msg.innerText = "信号を解析中...";
+        msg.innerText = "_ANALYZING_BITSTREAM...";
         
         try {
             const r = await fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({urls}) });
             const d = await r.json();
-            if (!d.success) { msg.style.color = "#ff4b4b"; msg.innerText = d.error; return; }
+            if (!d.success) { msg.style.color = "#ff4b4b"; msg.innerText = "_ERROR: " + d.error; return; }
             
             const list = document.getElementById('list');
             list.innerHTML = ""; window.songs = d.songs;
             
             d.songs.forEach((s, i) => {
-                const h = `
+                const html = `
                     <div class="track" id="card_${i}">
                         <div class="track-top">
                             <img class="thumb" src="${s.thumbnail}" onclick="window.open('${s.url}')">
-                            <input type="text" id="t_${i}" class="track-title" value="${s.title}">
+                            <input type="text" id="t_${i}" class="title-in" value="${s.title}">
                         </div>
                         <div class="track-details">
-                            <div><span class="label">アーティスト</span><input type="text" id="a_${i}" value="${s.uploader}"></div>
-                            <div><span class="label">出力</span><select id="f_${i}"><option value="wav">WAV</option><option value="mp4">MP4</option></select></div>
-                            <div><span class="label">開始カット(秒)</span><input type="number" id="s_${i}" value="0"></div>
-                            <div><span class="label">終了カット(秒)</span><input type="number" id="e_${i}" value="0"></div>
+                            <div><span class="label">ARTIST</span><input type="text" id="a_${i}" value="${s.uploader}"></div>
+                            <div><span class="label">START_OFF(S)</span><input type="number" id="s_${i}" value="0"></div>
+                            <input type="hidden" id="f_${i}" value="wav">
                         </div>
                     </div>`;
-                list.insertAdjacentHTML('beforeend', h);
+                list.insertAdjacentHTML('beforeend', html);
             });
             document.getElementById('exec-bar').style.display = 'flex';
             document.getElementById('cnt').innerText = d.songs.length.toString().padStart(2, '0');
-            msg.innerText = "_解析完了";
-        } catch(e) { msg.innerText = "通信エラー"; }
+            msg.style.color = "var(--accent)"; msg.innerText = "_SCAN_COMPLETE";
+        } catch(e) { msg.innerText = "_CONNECTION_FAILED"; }
     }
 
     async function doDownload() {
@@ -147,20 +147,18 @@
             const title = document.getElementById(`t_${i}`).value;
             const artist = document.getElementById(`a_${i}`).value;
             let name = tpl.replace('{title}', title).replace('{artist}', artist).replace(/[\\/:*?"<>|]/g, "");
-            msg.innerText = `[${i+1}/${window.songs.length}] 保存中...`;
+            msg.innerText = `_SYNCING [${i+1}/${window.songs.length}]: ${name}`;
             const res = await fetch('/download', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    url: s.url, filename: name, format: document.getElementById(`f_${i}`).value,
-                    offset_start: document.getElementById(`s_${i}`).value,
-                    offset_end: 0
+                    url: s.url, filename: name, format: 'wav', offset_start: document.getElementById(`s_${i}`).value
                 })
             });
             const b = await res.blob();
-            const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${name}.${document.getElementById(`f_${i}`).value}`; a.click();
-            document.getElementById(`card_${i}`).style.opacity = "0.2";
+            const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${name}.wav`; a.click();
+            document.getElementById(`card_${i}`).style.opacity = "0.1";
         }
-        msg.innerText = "完了";
+        msg.innerText = "_COMPLETE";
     }
 </script>
 </body>
