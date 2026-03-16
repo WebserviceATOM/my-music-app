@@ -5,7 +5,28 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 DOWNLOAD_FOLDER = '/tmp'
-COOKIE_PATH = 'cookies.txt' # GitHubに上げたクッキーファイルを使う設定
+COOKIE_FILE = 'cookies.txt'
+CLEAN_COOKIE_FILE = '/tmp/clean_cookies.txt'
+
+# --- 処理側の問題を解決する「クッキー浄化装置」 ---
+def sanitize_cookies():
+    if not os.path.exists(COOKIE_FILE):
+        return None
+    try:
+        with open(COOKIE_FILE, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        with open(CLEAN_COOKIE_FILE, 'w', encoding='utf-8') as f:
+            for line in lines:
+                # 文字としての「\t」を本物の「タブ記号」に強制置換
+                clean_line = line.replace('\\t', '\t')
+                # ドメインの先頭にドットがない場合に追加（Netscape形式の厳格ルール対応）
+                if clean_line.startswith('youtube.com'):
+                    clean_line = '.' + clean_line
+                f.write(clean_line)
+        return CLEAN_COOKIE_FILE
+    except:
+        return None
 
 @app.route('/')
 def index():
@@ -16,12 +37,15 @@ def analyze():
     try:
         urls = request.json.get('urls', [])
         all_songs = []
+        
+        # クッキーを浄化してから使用
+        clean_path = sanitize_cookies()
+        
         ydl_opts = {
             'quiet': True, 'extract_flat': True, 'nocheckcertificate': True,
+            'cookiefile': clean_path if clean_path else None,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         }
-        # クッキーファイルがあれば使う（ブロック回避用）
-        if os.path.exists(COOKIE_PATH):
-            ydl_opts['cookiefile'] = COOKIE_PATH
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             for url in urls:
@@ -46,20 +70,20 @@ def download():
         url, name, fmt = d.get('url'), d.get('filename'), d.get('format')
         off_s, off_e = int(d.get('offset_start', 0)), int(d.get('offset_end', 0))
 
+        clean_path = sanitize_cookies()
         ydl_opts = {
             'outtmpl': f'{DOWNLOAD_FOLDER}/{name}.%(ext)s',
             'format': 'bestaudio/best',
             'nocheckcertificate': True,
+            'cookiefile': clean_path if clean_path else None
         }
-        if os.path.exists(COOKIE_PATH):
-            ydl_opts['cookiefile'] = COOKIE_PATH
 
         if fmt == 'wav':
             ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'wav'}]
             ydl_opts['postprocessor_args'] = ['-ar', '48000', '-sample_fmt', 's24']
 
         if off_s > 0 or off_e > 0:
-            with yt_dlp.YoutubeDL({'quiet': True, 'cookiefile': COOKIE_PATH if os.path.exists(COOKIE_PATH) else None}) as ydl_info:
+            with yt_dlp.YoutubeDL({'quiet': True, 'cookiefile': clean_path}) as ydl_info:
                 info = ydl_info.extract_info(url, download=False)
                 duration = info.get('duration', 0)
                 ffmpeg_args = ['-ss', str(off_s)]
