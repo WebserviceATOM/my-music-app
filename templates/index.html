@@ -3,93 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIBESYNC CONSOLE</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <title>VIBESYNC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0b0e14; --panel: #161b22; --accent: #00f2ea; --text: #c9d1d9; --border: #30363d; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', 'Noto Sans JP', sans-serif; }
-        body { background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        :root { --bg: #000; --panel: #111; --border: #222; --accent: #00f2ea; --text: #fff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans JP', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
 
-        /* --- サイドバー --- */
-        #sidebar {
-            position: fixed; left: -260px; top: 0; width: 260px; height: 100vh;
-            background: #0d1117; border-right: 1px solid var(--border);
-            transition: 0.3s ease; z-index: 2000; padding: 60px 25px;
+        /* --- サイドメニュー（システム情報） --- */
+        #side {
+            position: fixed; left: -280px; top: 0; width: 280px; height: 100vh;
+            background: #050505; border-right: 1px solid var(--border);
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; padding: 60px 30px;
         }
-        #sidebar.open { left: 0; }
-        .side-trigger {
-            position: fixed; left: 0; top: 0; width: 40px; height: 100vh;
-            cursor: pointer; z-index: 2001; display: flex; align-items: center; justify-content: center;
+        #side.open { left: 0; }
+        .side-toggle {
+            position: fixed; left: 10px; top: 20px; width: 40px; height: 40px;
+            z-index: 2001; display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
-        .side-trigger:hover { background: rgba(255,255,255,0.02); }
-        .side-trigger span { transform: rotate(-90deg); color: #444; font-size: 0.7rem; font-weight: bold; letter-spacing: 5px; }
+        .side-toggle div { width: 20px; height: 1px; background: #444; position: relative; }
+        .side-toggle div::before, .side-toggle div::after { content: ''; position: absolute; width: 20px; height: 1px; background: #444; left: 0; }
+        .side-toggle div::before { top: -6px; } .side-toggle div::after { top: 6px; }
 
-        .sys-item { margin-bottom: 25px; }
-        .sys-label { font-size: 0.65rem; color: #8b949e; display: block; margin-bottom: 4px; }
-        .sys-val { color: var(--accent); font-weight: bold; font-size: 0.9rem; }
+        .sys-label { font-size: 0.6rem; color: #555; display: block; margin-top: 25px; border-bottom: 1px solid #111; padding-bottom: 3px; }
+        .sys-val { font-size: 0.9rem; color: var(--accent); font-weight: bold; margin-top: 5px; display: block; }
 
-        /* --- メイン --- */
-        #main { flex: 1; margin-left: 40px; padding: 80px 60px; }
-        header { border-bottom: 1px solid var(--border); margin-bottom: 50px; padding-bottom: 20px; }
-        header h1 { font-size: 2.5rem; font-weight: 900; color: #fff; letter-spacing: -2px; }
+        /* --- メインコンテンツ --- */
+        #main { flex: 1; padding: 80px 20px 120px 20px; width: 100%; max-width: 800px; margin: 0 auto; }
+        header { margin-bottom: 50px; text-align: center; }
+        header h1 { font-size: 1.5rem; font-weight: 900; letter-spacing: 5px; color: #fff; }
 
-        .input-panel { background: var(--panel); border-radius: 12px; padding: 30px; border: 1px solid var(--border); margin-bottom: 40px; }
-        .row { display: flex; gap: 10px; margin-bottom: 15px; }
-        input, select { background: #0d1117; border: 1px solid var(--border); color: #fff; padding: 14px 18px; border-radius: 8px; font-size: 0.95rem; outline: none; transition: 0.2s; }
+        /* 入力エリア */
+        .input-card { background: var(--panel); border-radius: 12px; padding: 25px; border: 1px solid var(--border); margin-bottom: 30px; }
+        .row { display: flex; gap: 8px; margin-bottom: 12px; }
+        input, select { background: #000; border: 1px solid var(--border); color: #fff; padding: 14px; border-radius: 8px; font-size: 0.9rem; outline: none; width: 100%; }
         input:focus { border-color: var(--accent); }
         
-        .btn { background: #fff; color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 8px; transition: 0.2s; }
-        .btn:hover { background: var(--accent); }
-        .btn-plus { width: 50px; font-size: 1.2rem; }
-        .btn-run { width: 100%; height: 55px; font-size: 1.1rem; margin-top: 10px; }
+        .btn { border: none; font-weight: bold; cursor: pointer; border-radius: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-plus { background: #222; color: #fff; width: 50px; flex-shrink: 0; font-size: 1.2rem; }
+        .btn-main { background: #fff; color: #000; width: 100%; height: 55px; font-size: 1rem; margin-top: 10px; }
+        .btn-main:active { transform: scale(0.98); }
 
-        /* --- トラック --- */
-        .track { background: var(--panel); border-radius: 12px; border: 1px solid var(--border); display: grid; grid-template-columns: 240px 1fr; margin-bottom: 25px; overflow: hidden; }
-        .track-thumb { width: 240px; height: 135px; border-right: 1px solid var(--border); position: relative; cursor: pointer; }
-        .track-thumb img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
-        .track:hover img { opacity: 1; }
+        /* --- 楽曲カード --- */
+        .track { background: var(--panel); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; overflow: hidden; display: flex; flex-direction: column; }
+        .track-top { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+        .thumb { width: 120px; height: 68px; object-fit: cover; border-right: 1px solid var(--border); }
+        .title-box { flex: 1; padding: 0 15px; }
+        .title-input { background: transparent; border: none; font-size: 0.95rem; font-weight: bold; color: #fff; padding: 10px 0; }
         
-        .track-body { padding: 20px; }
-        .track-title { width: 100%; background: transparent; border: none; border-bottom: 1px solid #30363d; font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 15px; padding: 5px 0; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 10px; }
-        label { font-size: 0.7rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: bold; }
+        .track-details { padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .label { font-size: 0.65rem; color: #555; display: block; margin-bottom: 4px; }
 
+        /* --- フッターボタン --- */
         #exec-bar {
-            position: fixed; bottom: 30px; left: 70px; right: 30px; height: 70px;
+            position: fixed; bottom: 20px; left: 20px; right: 20px; height: 65px;
             background: #fff; color: #000; display: none; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 1.2rem; letter-spacing: 10px; border-radius: 12px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1000;
+            font-weight: 900; font-size: 1rem; border-radius: 12px; cursor: pointer; z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        #exec-bar:hover { background: var(--accent); transform: translateY(-2px); }
 
-        #msg { color: #f85149; font-size: 0.8rem; margin-bottom: 20px; font-weight: bold; white-space: pre-wrap; }
+        #msg { text-align: center; color: var(--accent); font-size: 0.8rem; margin-bottom: 20px; height: 1rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="side-trigger" onclick="toggleSide()"><span>CONSOLE</span></div>
-<div id="sidebar">
-    <div class="sys-item"><span class="sys-label">SERVER</span><span class="sys-val">ONLINE</span></div>
-    <div class="sys-item"><span class="sys-label">ENGINE</span><span class="sys-val">24BIT WAV</span></div>
-    <div class="sys-item"><span class="sys-label">TIER</span><span class="sys-val">FREE / 750H</span></div>
-    <div class="sys-item"><span class="sys-label">SESSION</span><span class="sys-val" id="cnt">00</span></div>
-    <button class="btn" style="width:100%; padding:10px; margin-top:40px;" onclick="toggleSide()">CLOSE</button>
+<div class="side-toggle" onclick="toggleSide()"><div></div></div>
+<div id="side">
+    <span class="sys-label">システム状態</span><span class="sys-val">オンライン</span>
+    <span class="sys-label">出力規格</span><span class="sys-val">24bit WAV</span>
+    <span class="sys-label">残り稼働枠</span><span class="sys-val">750時間 / 月</span>
+    <span class="sys-label">読み込み曲数</span><span class="sys-val" id="cnt">00</span>
+    <button class="btn" style="width:100%; padding:12px; margin-top:60px; background:#111; color:#555; font-size:0.7rem;" onclick="toggleSide()">メニューを閉じる</button>
 </div>
 
 <div id="main">
     <header><h1>VIBESYNC</h1></header>
 
-    <div class="input-panel">
-        <div id="urls">
+    <div class="input-card">
+        <div id="url-list">
             <div class="row">
-                <input type="text" class="url-in" placeholder="YouTube URL" style="flex:1;">
+                <input type="text" class="url-in" placeholder="YouTube URL を貼り付け">
                 <button class="btn btn-plus" onclick="addIn()">+</button>
             </div>
         </div>
         <div style="margin-top:25px;">
-            <label>命名規則</label>
-            <input type="text" id="tpl" value="[{title}] {artist}" style="width:100%;">
+            <span class="label">ファイル名形式</span>
+            <input type="text" id="tpl" value="[{title}] {artist}">
         </div>
-        <button class="btn btn-run" onclick="doAnalyze()">解析を実行</button>
+        <button class="btn btn-main" onclick="doAnalyze()">解析を開始する</button>
     </div>
 
     <div id="msg"></div>
@@ -99,52 +100,46 @@
 <div id="exec-bar" onclick="doDownload()">一括保存を開始</div>
 
 <script>
-    function toggleSide() { document.getElementById('sidebar').classList.toggle('open'); }
+    function toggleSide() { document.getElementById('side').classList.toggle('open'); }
     function addIn() {
         const d = document.createElement('div'); d.className = 'row';
-        d.innerHTML = `<input type="text" class="url-in" placeholder="URLを追加" style="flex:1;"><button class="btn btn-plus" style="background:#222;color:#fff;" onclick="this.parentElement.remove()">-</button>`;
-        document.getElementById('urls').appendChild(d);
+        d.innerHTML = `<input type="text" class="url-in" placeholder="URLを追加"><button class="btn btn-plus" style="background:#111;" onclick="this.parentElement.remove()">-</button>`;
+        document.getElementById('url-list').appendChild(d);
     }
 
     async function doAnalyze() {
         const urls = Array.from(document.querySelectorAll('.url-in')).map(i => i.value).filter(v => v.trim());
         const msg = document.getElementById('msg');
-        msg.style.color = "var(--accent)";
-        msg.innerText = "信号を解析中...";
+        msg.innerText = "解析中...";
         
         try {
             const r = await fetch('/analyze', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({urls}) });
             const d = await r.json();
-            if (!d.success) { msg.style.color = "#f85149"; msg.innerText = "エラーが発生しました:\n" + d.error; return; }
+            if (!d.success) { msg.innerText = "エラー: " + d.error; return; }
             
             const list = document.getElementById('list');
-            list.innerHTML = "";
-            window.songs = d.songs;
+            list.innerHTML = ""; window.songs = d.songs;
             
             d.songs.forEach((s, i) => {
                 const html = `
                     <div class="track" id="card_${i}">
-                        <div class="track-thumb" onclick="window.open('${s.url}')">
-                            <img src="${s.thumbnail}">
+                        <div class="track-top">
+                            <img class="thumb" src="${s.thumbnail}">
+                            <div class="title-box"><input type="text" id="t_${i}" class="title-input" value="${s.title}" style="width:100%;"></div>
                         </div>
-                        <div class="track-body">
-                            <input type="text" id="t_${i}" class="track-title" value="${s.title}">
-                            <div class="grid">
-                                <div><label>アーティスト</label><input type="text" id="a_${i}" value="${s.uploader}" style="width:100%;"></div>
-                                <div><label>形式</label><select id="f_${i}" style="width:100%;"><option value="wav">WAV 24bit</option><option value="mp4">MP4</option></select></div>
-                            </div>
-                            <div class="grid">
-                                <div><label>開始カット(秒)</label><input type="number" id="s_${i}" value="0" style="width:100%;"></div>
-                                <div><label>終了カット(秒)</label><input type="number" id="e_${i}" value="0" style="width:100%;"></div>
-                            </div>
+                        <div class="track-details">
+                            <div><span class="label">歌手名</span><input type="text" id="a_${i}" value="${s.uploader}"></div>
+                            <div><span class="label">保存形式</span><select id="f_${i}"><option value="wav">WAV</option><option value="mp4">MP4</option></select></div>
+                            <div><span class="label">開始カット(秒)</span><input type="number" id="s_${i}" value="0"></div>
+                            <div><span class="label">終了カット(秒)</span><input type="number" id="e_${i}" value="0"></div>
                         </div>
                     </div>`;
                 list.insertAdjacentHTML('beforeend', html);
             });
             document.getElementById('exec-bar').style.display = 'flex';
-            document.getElementById('cnt').innerText = d.songs.length.toString().padStart(2, '0');
-            msg.innerText = "解析完了";
-        } catch(e) { msg.innerText = "通信に失敗しました。"; }
+            document.getElementById('cnt').innerText = d.songs.length.toString().padStart(2, '0') + " 曲";
+            msg.innerText = "";
+        } catch(e) { msg.innerText = "サーバー接続エラー"; }
     }
 
     async function doDownload() {
@@ -155,7 +150,7 @@
             const title = document.getElementById(`t_${i}`).value;
             const artist = document.getElementById(`a_${i}`).value;
             let name = tpl.replace('{title}', title).replace('{artist}', artist).replace(/[\\/:*?"<>|]/g, "");
-            msg.innerText = `${i+1}/${window.songs.length} を保存中: ${name}`;
+            msg.innerText = `[${i+1}/${window.songs.length}] 保存中...`;
             const res = await fetch('/download', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
@@ -167,7 +162,7 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `${name}.${document.getElementById(`f_${i}`).value}`; a.click();
             document.getElementById(`card_${i}`).style.opacity = "0.2";
         }
-        msg.innerText = "全作業が完了しました。";
+        msg.innerText = "完了";
     }
 </script>
 </body>
