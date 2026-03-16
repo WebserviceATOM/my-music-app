@@ -3,88 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Music App</title>
+    <title>VibeSync Pro - 究極ダウンローダー</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; padding: 20px; }
-        .card { background: #1e1e1e; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #333; }
-        textarea, input, select { background: #333; color: white; border: 1px solid #444; padding: 10px; border-radius: 5px; width: 100%; box-sizing: border-box; margin-top: 5px; }
-        button { background: #e50914; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        img { border-radius: 5px; margin-bottom: 10px; }
-        #status { color: #00ff00; margin: 10px 0; }
+        :root { --primary: #00f2ea; --secondary: #ff0050; --bg: #05070a; --card-bg: rgba(20, 25, 35, 0.95); }
+        body { background: var(--bg); background-image: radial-gradient(circle at 50% -20%, #1e293b, #05070a); color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .app-container { max-width: 900px; width: 100%; }
+        .monitor-bar { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-around; font-size: 0.8rem; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .stat-value { display: block; font-weight: 800; color: var(--primary); font-size: 1.1rem; }
+        header h1 { text-align: center; font-size: 3rem; font-weight: 900; background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 10px 0; letter-spacing: -2px; }
+        .input-section { background: var(--card-bg); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
+        .url-input-group { display: flex; gap: 10px; margin-bottom: 12px; }
+        input, select { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 10px; outline: none; }
+        .btn { cursor: pointer; border: none; border-radius: 10px; font-weight: 700; transition: 0.3s; }
+        .btn-plus { background: var(--primary); color: #000; width: 45px; }
+        .btn-scan { background: var(--secondary); color: white; width: 100%; height: 55px; font-size: 1.2rem; margin-top: 15px; }
+        .naming-rule { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; font-size: 0.85rem; }
+        .song-card { background: var(--card-bg); border-radius: 20px; padding: 20px; margin-bottom: 20px; border-left: 5px solid var(--primary); display: grid; grid-template-columns: 180px 1fr; gap: 20px; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .song-thumb { width: 100%; border-radius: 12px; }
+        .channel-sync { background: rgba(0,242,234,0.1); padding: 5px 12px; border-radius: 20px; color: var(--primary); font-size: 0.7rem; cursor: pointer; border: 1px solid var(--primary); display: inline-block; margin-bottom: 10px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+        .label-small { font-size: 0.7rem; color: #64748b; margin-bottom: 4px; display: block; }
+        .download-bar { position: sticky; bottom: 20px; width: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); padding: 18px; border-radius: 15px; color: #000; font-weight: 900; text-align: center; cursor: pointer; box-shadow: 0 10px 40px rgba(0,0,0,0.6); display: none; z-index: 1000; }
     </style>
 </head>
 <body>
-    <h1>音楽保存システム</h1>
-    <div class="card">
-        <label>YouTube URLを入力 (1行に1つ)</label>
-        <textarea id="urlInput" rows="5" placeholder="https://www.youtube.com/watch?v=..."></textarea>
-        <button onclick="analyzeAll()">1. 情報を解析する</button>
+
+<div class="app-container">
+    <div class="monitor-bar">
+        <div style="text-align:center"><span class="stat-value">Free</span>Plan</div>
+        <div style="text-align:center"><span class="stat-value">750h</span>残り時間</div>
+        <div style="text-align:center"><span class="stat-value">512MB</span>RAM</div>
+        <div style="text-align:center"><span class="stat-value" id="count-monitor">0</span>解析済み</div>
     </div>
-    <div id="status"></div>
+
+    <header><h1>VibeSync Pro</h1></header>
+
+    <div class="input-section">
+        <div id="urlInputs">
+            <div class="url-input-group">
+                <input type="text" class="url-field" placeholder="YouTube / YT Music のURL" style="flex: 1;">
+                <button class="btn btn-plus" onclick="addInput()">＋</button>
+            </div>
+        </div>
+        
+        <div class="naming-rule">
+            <label class="label-small">ファイル名命名規則 (カスタム可能)</label>
+            <input type="text" id="namingTemplate" value="【{title}】{artist}" style="width:100%;">
+            <p style="font-size: 0.7rem; color: #555; margin: 5px 0 0;">変数: {title}, {artist}, {album}, {n}(連番)</p>
+        </div>
+
+        <button class="btn btn-scan" onclick="analyzeAll()">YouTubeをスキャンして解析開始</button>
+    </div>
+
+    <div id="status" style="text-align:center; color:var(--primary); font-weight:bold; margin-bottom:20px;"></div>
     <div id="list"></div>
-    <button id="downloadBtn" style="display:none; background: #007bff;" onclick="startBatchDownload()">2. 全曲ダウンロード開始</button>
 
-    <script>
-        let songQueue = [];
-        async function analyzeAll() {
-            const urls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim());
-            const listDiv = document.getElementById('list');
-            listDiv.innerHTML = "解析中...しばらくお待ちください。";
-            songQueue = [];
+    <div id="downloadBar" class="download-bar" onclick="startBatchDownload()">
+        すべての設定を確定して一括保存を開始
+    </div>
+</div>
 
-            for (let url of urls) {
-                try {
-                    const res = await fetch('/analyze', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({url: url.trim()})
-                    });
-                    const data = await res.json();
-                    const id = Math.random().toString(36).substring(7);
-                    songQueue.push({id, url: url.trim(), data});
+<script>
+    let songQueue = [];
 
-                    const html = `
-                        <div class="card" id="card-${id}">
-                            <img src="${data.thumbnail}" width="100%">
-                            <label>曲名: <input type="text" id="title-${id}" value="${data.title}"></label>
-                            <label>アルバム: <input type="text" id="album-${id}" value="${data.album}"></label>
-                            <label>開始(秒/分): <input type="text" id="start-${id}" placeholder="例: 00:00:10"></label>
-                            <label>終了(秒/分): <input type="text" id="end-${id}" placeholder="例: 00:04:30"></label>
-                            <label>形式: <select id="format-${id}"><option value="wav">WAV (音楽)</option><option value="mp4">MP4 (動画)</option></select></label>
-                        </div>`;
-                    listDiv.innerHTML = (listDiv.innerHTML.includes("解析中")) ? html : listDiv.innerHTML + html;
-                } catch(e) { console.error(e); }
-            }
-            document.getElementById('downloadBtn').style.display = 'block';
-            document.getElementById('status').innerText = "解析完了。設定を確認してダウンロードしてください。";
+    function addInput() {
+        const div = document.createElement('div');
+        div.className = 'url-input-group';
+        div.innerHTML = `<input type="text" class="url-field" placeholder="URLを追加" style="flex:1;"><button class="btn btn-plus" style="background:var(--secondary);" onclick="this.parentElement.remove()">✕</button>`;
+        document.getElementById('urlInputs').appendChild(div);
+    }
+
+    async function analyzeAll() {
+        const fields = document.querySelectorAll('.url-field');
+        const urls = Array.from(fields).map(f => f.value).filter(v => v.trim());
+        if(urls.length === 0) return alert("URLを入力してください");
+
+        const status = document.getElementById('status');
+        status.innerText = "YouTubeを解析中...";
+        const res = await fetch('/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({urls})
+        });
+        const data = await res.json();
+        if(!data.success) return alert("解析エラー: " + data.error);
+
+        const listDiv = document.getElementById('list');
+        listDiv.innerHTML = "";
+        songQueue = [];
+
+        data.songs.forEach((song, index) => {
+            const id = Math.random().toString(36).substring(7);
+            songQueue.push({id, url: song.url, uploader: song.uploader});
+            const html = `
+                <div class="song-card" id="card-${id}" data-uploader="${song.uploader}">
+                    <img src="${song.thumbnail}" class="song-thumb">
+                    <div class="song-info">
+                        <div class="channel-sync" onclick="syncChannel('${song.uploader}', '${id}')">同じ投稿者(${song.uploader})を同期</div>
+                        <label class="label-small">TITLE (編集可)</label>
+                        <input type="text" id="title-${id}" value="${song.title}" style="width:100%; margin-bottom:10px;">
+                        <div class="grid-2">
+                            <div><label class="label-small">ARTIST</label><input type="text" id="artist-${id}" class="artist-field" value="${song.uploader}" style="width:100%;"></div>
+                            <div><label class="label-small">ALBUM</label><input type="text" id="album-${id}" class="album-field" value="Loading..." style="width:100%;"></div>
+                        </div>
+                        <div class="grid-2">
+                            <div><label class="label-small">前から◯秒カット</label><input type="number" id="off-s-${id}" value="0" style="width:100%;"></div>
+                            <div><label class="label-small">後ろから◯秒カット</label><input type="number" id="off-e-${id}" value="0" style="width:100%;"></div>
+                        </div>
+                        <label class="label-small">FORMAT</label>
+                        <select id="format-${id}" style="width:100%;"><option value="wav">High-Res WAV</option><option value="mp4">Music Video (MP4)</option></select>
+                    </div>
+                </div>`;
+            listDiv.insertAdjacentHTML('beforeend', html);
+            fetchExtra(id, song.title, song.uploader);
+        });
+
+        status.innerText = data.songs.length + "曲を読み込みました";
+        document.getElementById('count-monitor').innerText = data.songs.length;
+        document.getElementById('downloadBar').style.display = 'block';
+    }
+
+    async function fetchExtra(id, title, uploader) {
+        const res = await fetch('/get_extra_info', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({title, uploader})
+        });
+        const data = await res.json();
+        document.getElementById(`album-${id}`).value = data.album;
+        document.getElementById(`artist-${id}`).value = data.artist;
+    }
+
+    function syncChannel(uploader, sourceId) {
+        const artist = document.getElementById(`artist-${sourceId}`).value;
+        document.querySelectorAll(`.song-card[data-uploader="${uploader}"]`).forEach(card => {
+            const id = card.id.replace('card-', '');
+            document.getElementById(`artist-${id}`).value = artist;
+        });
+        alert(`投稿者「${uploader}」のアーティスト名をすべて更新しました！`);
+    }
+
+    async function startBatchDownload() {
+        const template = document.getElementById('namingTemplate').value;
+        for (let i = 0; i < songQueue.length; i++) {
+            const s = songQueue[i];
+            const title = document.getElementById(`title-${s.id}`).value;
+            const artist = document.getElementById(`artist-${s.id}`).value;
+            const album = document.getElementById(`album-${s.id}`).value;
+            
+            // 命名規則の適用
+            let finalName = template.replace('{title}', title).replace('{artist}', artist).replace('{album}', album).replace('{n}', i+1);
+            
+            document.getElementById('status').innerText = `処理中 (${i+1}/${songQueue.length}): ${finalName}`;
+
+            const res = await fetch('/download', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    url: s.url,
+                    filename: finalName,
+                    format: document.getElementById(`format-${s.id}`).value,
+                    offset_start: document.getElementById(`off-s-${s.id}`).value,
+                    offset_end: document.getElementById(`off-e-${s.id}`).value
+                })
+            });
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${finalName}.${document.getElementById(`format-${s.id}`).value}`;
+            a.click();
+            document.getElementById(`card-${s.id}`).style.opacity = "0.5";
         }
-
-        async function startBatchDownload() {
-            for (let song of songQueue) {
-                const id = song.id;
-                const title = document.getElementById(`title-${id}`).value;
-                document.getElementById('status').innerText = `ダウンロード中: ${title}`;
-                
-                const res = await fetch('/download', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        url: song.url,
-                        filename: title,
-                        format: document.getElementById(`format-${id}`).value,
-                        start: document.getElementById(`start-${id}`).value,
-                        end: document.getElementById(`end-${id}`).value
-                    })
-                });
-                const blob = await res.blob();
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `${title}.${document.getElementById(`format-${id}`).value}`;
-                a.click();
-                document.getElementById(`card-${id}`).style.opacity = "0.5";
-            }
-            document.getElementById('status').innerText = "すべての処理が完了しました！";
-        }
-    </script>
+        document.getElementById('status').innerText = "全曲完了！";
+    }
+</script>
 </body>
 </html>
